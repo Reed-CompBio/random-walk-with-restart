@@ -115,3 +115,9 @@ generate_output_edges(G,final_pr,output_edges_file)
 '''
 using edge flux
 '''
+
+
+'''
+docker run -w /data --mount type=bind,source=/${PWD},target=/data erikliu24/random-walk
+
+'''

@@ -57,24 +57,24 @@ cd \random-walk-with-restart
 5. python random_walk.py --edges_file ./input/edges4.txt --sources_file ./input/source_nodes4.txt --targets_file ./input/target_nodes4.txt --output_nodes ./output/output_nodes4.txt --output_edges ./output/output_edges4.txt
 '''
 
-def parse_arguments():
-    """
-    Process command line arguments.
-    @return arguments
-    """
-    parser = argparse.ArgumentParser(
-        description="Random Walk path reconstruction"
-    )
-    parser.add_argument("--edges_file", type=Path, required=True, help="Path to the edges file")
-    parser.add_argument("--sources_file", type=Path, required=True, help="Path to the source node file")
-    parser.add_argument("--targets_file", type=Path, required=True, help="Path to the target node file")
-    # parser.add_argument("--relevance_function(default: pagerank)", type=str, required= True, default='r' ,help="Select a relevance function to use (r for random walk/h for HotNet)")
-    # parser.add_argument("--selection_function", type=str, required= True, default= 'min', help="Select a function to use (min for minimum/sum for sum)")
-    # parser.add_argument("--alpha", type=float, required= True, default= 0.01, help="Select the alpha value for the random walk")
-    parser.add_argument("--output_nodes", type=Path, required=True, help="Path to the output file for nodes")
-    parser.add_argument("--output_edges", type=Path, required=True, help="Path to the output file for edges")
+# def parse_arguments():
+#     """
+#     Process command line arguments.
+#     @return arguments
+#     """
+#     parser = argparse.ArgumentParser(
+#         description="Random Walk path reconstruction"
+#     )
+#     parser.add_argument("--edges_file", type=Path, required=True, help="Path to the edges file")
+#     parser.add_argument("--sources_file", type=Path, required=True, help="Path to the source node file")
+#     parser.add_argument("--targets_file", type=Path, required=True, help="Path to the target node file")
+#     # parser.add_argument("--relevance_function(default: pagerank)", type=str, required= True, default='r' ,help="Select a relevance function to use (r for random walk/h for HotNet)")
+#     # parser.add_argument("--selection_function", type=str, required= True, default= 'min', help="Select a function to use (min for minimum/sum for sum)")
+#     # parser.add_argument("--alpha", type=float, required= True, default= 0.01, help="Select the alpha value for the random walk")
+#     parser.add_argument("--output_nodes", type=Path, required=True, help="Path to the output file for nodes")
+#     parser.add_argument("--output_edges", type=Path, required=True, help="Path to the output file for edges")
 
-    return parser.parse_args()
+#     return parser.parse_args()
 
 # Utility functions
 def generate_nodes_and_edges(edges_file: Path) -> tuple:
@@ -206,13 +206,35 @@ def random_walk(edges_file: Path, sources_file: Path, targets_file: Path, output
     # Get the edge flux    
     generate_output_edges(G, final_pr, output_edges_file)
     
-def main():
-    """
-    Parse arguments and run pathway reconstruction
-    """
-    args = parse_arguments()
+# def main():
+#     """
+#     Parse arguments and run pathway reconstruction
+#     """
+#     args = parse_arguments()
+#     random_walk(args.edges_file, args.sources_file, args.targets_file, args.output_nodes, args.output_edges)
+
+# if __name__ == "__main__":
+#     main()
+
+def main(args):
+    ''' Parse a weighted edge list, source nodes list, and target nodes list. Run random-walk-with-restart algorithm on the graph to pagerank of each node and each edge. Write the solutions to a file.
+    '''
     random_walk(args.edges_file, args.sources_file, args.targets_file, args.output_nodes, args.output_edges)
+    
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(
+        description="Random Walk path reconstruction",
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--edges_file", type=Path, required=True, help="Path to the edges file")
+    parser.add_argument("--sources_file", type=Path, required=True, help="Path to the source node file")
+    parser.add_argument("--targets_file", type=Path, required=True, help="Path to the target node file")
+    # parser.add_argument("--relevance_function(default: pagerank)", type=str, required= True, default='r' ,help="Select a relevance function to use (r for random walk/h for HotNet)")
+    # parser.add_argument("--selection_function", type=str, required= True, default= 'min', help="Select a function to use (min for minimum/sum for sum)")
+    # parser.add_argument("--alpha", type=float, required= True, default= 0.01, help="Select the alpha value for the random walk")
+    parser.add_argument("--output_nodes", type=Path, required=True, help="Path to the output file for nodes")
+    parser.add_argument("--output_edges", type=Path, required=True, help="Path to the output file for edges")
 
+    args = parser.parse_args()
+    
+main(args)
