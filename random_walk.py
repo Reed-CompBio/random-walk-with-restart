@@ -28,9 +28,8 @@ C 1
 ...
 
 --targets_file (same format as sources_file) 
---relevance_function(default: random_walk) (options: random_walk, HotNet)
---selection_function(default: min)
-# --alpha(default: 0.01)
+--damping_factor(default: 0.85) (optional)
+--selection_function(default: min) (optional)
 
 --output_nodes
 format:
@@ -50,11 +49,9 @@ B C 0.6
 '''
 Test:
 cd \random-walk-with-restart
-1. python random_walk.py --edges_file ./input/edges.txt --sources_file ./input/source_nodes.txt --targets_file ./input/target_nodes.txt --output_nodes ./output/output_nodes.txt --output_edges ./output/output_edges.txt
-2. python random_walk.py --edges_file ./input/edges1.txt --sources_file ./input/source_nodes1.txt --targets_file ./input/target_nodes1.txt --output_nodes ./output/output_nodes1.txt --output_edges ./output/output_edges1.txt
-3. python random_walk.py --edges_file ./input/edges2.txt --sources_file ./input/source_nodes2.txt --targets_file ./input/target_nodes2.txt --output_nodes ./output/output_nodes2.txt --output_edges ./output/output_edges2.txt
-4. python random_walk.py --edges_file ./input/edges3.txt --sources_file ./input/source_nodes3.txt --targets_file ./input/target_nodes3.txt --output_nodes ./output/output_nodes3.txt --output_edges ./output/output_edges3.txt
-5. python random_walk.py --edges_file ./input/edges4.txt --sources_file ./input/source_nodes4.txt --targets_file ./input/target_nodes4.txt --output_nodes ./output/output_nodes4.txt --output_edges ./output/output_edges4.txt
+1. python random_walk.py --edges_file ./input/edges.txt --sources_file ./input/source_nodes.txt --targets_file ./input/target_nodes.txt --output_file ./output/output_file.txt
+2. python random_walk.py --edges_file ./input/edges.txt --sources_file ./input/source_nodes.txt --targets_file ./input/target_nodes.txt --damping_factor 0.7 --selection_function avg --output_file ./output/output_file.txt
+3. python random_walk.py --edges_file ./input/edges1.txt --sources_file ./input/source_nodes1.txt --targets_file ./input/target_nodes1.txt --output_file ./output/output_file1.txt
 '''
 
 def parse_arguments():
@@ -69,10 +66,9 @@ def parse_arguments():
     parser.add_argument("--sources_file", type=Path, required=True, help="Path to the source node file")
     parser.add_argument("--targets_file", type=Path, required=True, help="Path to the target node file")
     # parser.add_argument("--relevance_function(default: pagerank)", type=str, required= True, default='r' ,help="Select a relevance function to use (r for random walk/h for HotNet)")
-    # parser.add_argument("--selection_function", type=str, required= True, default= 'min', help="Select a function to use (min for minimum/sum for sum)")
-    # parser.add_argument("--alpha", type=float, required= True, default= 0.01, help="Select the alpha value for the random walk")
-    parser.add_argument("--output_nodes", type=Path, required=True, help="Path to the output file for nodes")
-    parser.add_argument("--output_edges", type=Path, required=True, help="Path to the output file for edges")
+    parser.add_argument("--damping_factor", type=float, required= False, default= 0.85, help="Select a damping factor between 0 and 1 for the random walk with restart (default: 0.85)")
+    parser.add_argument("--selection_function", type=str, required= False, default= 'min', help="Select a function to use (min for minimum/sum for sum/avg for average/max for maximum)")
+    parser.add_argument("--output_file", type=Path, required=True, help="Path to the output files")
 
     return parser.parse_args()
 
@@ -138,7 +134,7 @@ def generate_personalization_vector(nodes : list) -> dict:
     
     return personalization_vector
 
-def generate_output_edges(G: nx.DiGraph, pr : dict, output_edges_file: Path) -> None:
+def generate_output(G: nx.DiGraph, pr : dict, r_pr : dict, final_pr : dict, output_file: Path) -> None:
     """
     This function is for calculating the edge flux and writing it to the output file
     """
@@ -156,15 +152,21 @@ def generate_output_edges(G: nx.DiGraph, pr : dict, output_edges_file: Path) -> 
         # edge_sum[edge[0]] can never be 0 because we are only considering the nodes that have out_edges
         edge_flux[edge] = pr[edge[0]] * float(G[edge[0]][edge[1]]['weight']) / edge_sum[edge[0]]
 
-    with output_edges_file.open("w") as output_edges_f:
-        output_edges_f.write("Node1 Node2 Weight\n")
+    with output_file.open('w') as output_file_f:
+        output_file_f.write("Node1 Node2 Weight\n")
         for i in edge_flux:
-            output_edges_f.write(f"{i[0]} {i[1]} {edge_flux[i]}\n")
+            output_file_f.write(f"{i[0]} {i[1]} {edge_flux[i]}\n")
+        output_file_f.write("///////END OF THE EDGES///////\n \n")
         
-    print("Output edges file generated")
+        output_file_f.write("///////START OF THE NODES///////\n")
+        output_file_f.write("node pr r_pr final_pr\n")
+        for i in final_pr:
+            output_file_f.write(f"{i} {pr[i]} {r_pr[i]} {final_pr[i]}\n")
+        
+    print("Output file generated")
 
 # main algorithm
-def random_walk(edges_file: Path, sources_file: Path, targets_file: Path, output_nodes_file: Path, output_edges_file: Path):
+def random_walk(edges_file: Path, sources_file: Path, targets_file: Path, output_file: Path, damping_factor : float = 0.85 , selection_function : str = 'min'):
     """
     This function is the main algorithm for random walk path reconstruction.
     """
@@ -175,43 +177,56 @@ def random_walk(edges_file: Path, sources_file: Path, targets_file: Path, output
     if not targets_file.exists():
         raise OSError(f"Targets file {str(targets_file)} does not exist")
     
-    if output_nodes_file.exists():
-        print(f"Output files {str(output_nodes_file)} (nodes) will be overwritten")
-    if output_edges_file.exists():
-        print(f"Output files {str(output_edges_file)} (edges) will be overwritten")
+    if output_file.exists():
+        print(f"Output files {str(output_file)} (nodes) will be overwritten")
 
     # Create the parent directories for the output file if needed
-    output_nodes_file.parent.mkdir(parents=True, exist_ok=True)
-    output_edges_file.parent.mkdir(parents=True, exist_ok=True)
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+    
+    if damping_factor < 0 or damping_factor > 1:
+        raise ValueError(f"Damping factor should be between 0 and 1")
+    else:
+        print(f"Damping factor is {damping_factor}")
+    
+    if selection_function != 'min' and selection_function != 'sum' and selection_function != 'max' and selection_function != 'avg':
+        raise ValueError(f"Selection function should be either min, max, sum or avg")
+    else:
+        print(f"Selection function is {selection_function}")
 
     # Read the list of sources
     G = generate_graph(generate_nodes_and_edges(edges_file)[0], generate_nodes_and_edges(edges_file)[1])
     source_node = generate_nodes(sources_file)
-    pr = nx.pagerank(G, alpha=0.85, personalization=generate_personalization_vector(source_node))
+    pr = nx.pagerank(G, alpha=damping_factor, personalization=generate_personalization_vector(source_node))
     
     R = G.reverse()
     target_node = generate_nodes(targets_file)
-    r_pr = nx.pagerank(R, alpha=0.85, personalization=generate_personalization_vector(target_node))
+    r_pr = nx.pagerank(R, alpha=damping_factor, personalization=generate_personalization_vector(target_node))
 
     final_pr = {}
-    for i in pr:
-        final_pr[i] = min(pr[i], r_pr[i])
     
-    with output_nodes_file.open("w") as output_nodes_f:
-        output_nodes_f.write("node pr r_pr final_pr\n")
-        for i in final_pr:
-            output_nodes_f.write(f"{i} {pr[i]} {r_pr[i]} {final_pr[i]}\n")
-    print(f"Output nodes written to {str(output_nodes_file)}")
+    if selection_function == 'min':
+        for i in pr:
+            'Let user decide how to combine the two pageranks'
+            final_pr[i] = min(pr[i], r_pr[i])
+    elif selection_function == 'sum':
+        for i in pr:
+            final_pr[i] = pr[i] + r_pr[i]
+    elif selection_function == 'avg':
+        for i in pr:
+            final_pr[i] = (pr[i] + r_pr[i])/2
+    elif selection_function == 'max':
+        for i in pr:
+            final_pr[i] = max(pr[i], r_pr[i])
     
     # Get the edge flux    
-    generate_output_edges(G, final_pr, output_edges_file)
+    generate_output(G, pr = pr, r_pr = r_pr, final_pr = final_pr, output_file = output_file)
     
 def main():
     """
     Parse arguments and run pathway reconstruction
     """
     args = parse_arguments()
-    random_walk(args.edges_file, args.sources_file, args.targets_file, args.output_nodes, args.output_edges)
+    random_walk(args.edges_file, args.sources_file, args.targets_file,  args.output_file, args.damping_factor, args.selection_function)
 
 if __name__ == "__main__":
     main()

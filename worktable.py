@@ -79,15 +79,10 @@ for i in pr:
 
 print(f'Final pr, {final_pr}')    
 # for each node : node, pr, r_pr, final_pr
-output_nodes_file = Path("./output/output_nodes.txt")
-output_edges_file = Path("./output/output_edges.txt")
+output_file = Path("./output/output_file.txt")
 
-with output_nodes_file.open("w") as output_nodes_f:
-    output_nodes_f.write("node pr r_pr final_pr\n")
-    for i in final_pr:
-        output_nodes_f.write(f"{i} {pr[i]} {r_pr[i]} {final_pr[i]}\n")
-
-def generate_output_edges(G: nx.DiGraph, pr : dict, output_edges_file: Path):
+def generate_output_edges(G: nx.DiGraph, pr : dict, output_prefix: Path):
+    
     edge_sum = {}
     for node in G.nodes():
         temp = 0
@@ -97,6 +92,7 @@ def generate_output_edges(G: nx.DiGraph, pr : dict, output_edges_file: Path):
         
     print(edge_sum)
 
+
     edge_flux = {}
     #calculate the edge flux
     for edge in G.edges():
@@ -105,12 +101,18 @@ def generate_output_edges(G: nx.DiGraph, pr : dict, output_edges_file: Path):
 
     print(edge_flux)
 
-    with output_edges_file.open("w") as output_edges_f:
-        output_edges_f.write("Node1 Node2 Weight\n")
+    with output_prefix.open('w') as output_file_f:
+        output_file_f.write("Node1 Node2 Weight\n")
         for i in edge_flux:
-            output_edges_f.write(f"{i[0]} {i[1]} {edge_flux[i]}\n")
+            output_file_f.write(f"{i[0]} {i[1]} {edge_flux[i]}\n")
+        output_file_f.write("END OF THE EDGES\n \n")
+        
+        output_file_f.write("node pr r_pr final_pr\n")
+        for i in final_pr:
+            output_file_f.write(f"{i} {pr[i]} {r_pr[i]} {final_pr[i]}\n")
+
             
-generate_output_edges(G,final_pr,output_edges_file)
+generate_output_edges(G,final_pr, output_file)
 # get a list of edges 
 '''
 using edge flux
