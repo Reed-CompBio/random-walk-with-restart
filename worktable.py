@@ -1,10 +1,13 @@
 # Read the list of sources
 from pathlib import Path
 import networkx as nx
+import pandas as pd
+
 
 edges_file = Path("./input/edges.txt")
 source_file = Path("./input/source_nodes.txt")
 target_file = Path("./input/target_nodes.txt")
+output_file = Path("./output/output_file.txt")
 
 def generate_nodes_and_edges(edges_file: Path) -> tuple:
     nodes = set()
@@ -79,7 +82,7 @@ for i in pr:
 
 print(f'Final pr, {final_pr}')    
 # for each node : node, pr, r_pr, final_pr
-output_file = Path("./output/output_file.txt")
+
 
 def generate_output_edges(G: nx.DiGraph, pr : dict, output_prefix: Path):
     
@@ -102,12 +105,9 @@ def generate_output_edges(G: nx.DiGraph, pr : dict, output_prefix: Path):
     print(edge_flux)
 
     with output_prefix.open('w') as output_file_f:
-        output_file_f.write("Node1 Node2 Weight\n")
+        output_file_f.write("Node1 Node2 Weight Placeholder\n")
         for i in edge_flux:
-            output_file_f.write(f"{i[0]} {i[1]} {edge_flux[i]}\n")
-        output_file_f.write("END OF THE EDGES\n \n")
-        
-        output_file_f.write("node pr r_pr final_pr\n")
+            output_file_f.write(f"{i[0]} {i[1]} {edge_flux[i]} \n")
         for i in final_pr:
             output_file_f.write(f"{i} {pr[i]} {r_pr[i]} {final_pr[i]}\n")
 
@@ -123,3 +123,20 @@ using edge flux
 docker run -w /data --mount type=bind,source=/${PWD},target=/data erikliu24/random-walk
 
 '''
+
+df = pd.read_csv(output_file, sep=" ")
+print(df)
+
+# get all rows where placeholder is Nan
+df_edge = df.loc[df["Placeholder"].isnull()]
+print(df_edge)
+
+# get rid of the placeholder column and output it to a file
+df_edge = df_edge.drop(columns=['Placeholder'])
+df_edge.to_csv('./output/edge_file.txt', sep=" ", index=False, header=True)
+
+# locate the first place where placeholder is not Nan
+df_node = df.loc[df['Placeholder'].notnull()]
+# rename the header to Node, Pr, R_Pr, Final_Pr
+df_node = df_node.rename(columns={'Node1': 'Node', 'Node2': 'Pr', 'Weight': 'R_Pr', 'Placeholder': 'Final_Pr'})
+df_node.to_csv('./output/node_file.txt', sep=" ", index=False, header=True)

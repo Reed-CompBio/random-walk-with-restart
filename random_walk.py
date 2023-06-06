@@ -31,18 +31,23 @@ C 1
 --damping_factor(default: 0.85) (optional)
 --selection_function(default: min) (optional)
 
---output_nodes
+--output_file
 format:
-node pr r_pr final pr
-A 1 1 1
-B 2 2 2
-...
+Node1 Node2 Weight Placeholder
+C D 0.09361880756187185 
+A D 0.09361880756187185 
+B D 0.09361880756187185 
+D E 0.11013877598738507 
+D F 0.11013877598738507 
+D G 0.11013877598738507 
+C 0.09361880756187185 0.09361880756187185 0.09361880756187185
+F 0.09361880756187185 0.12957574978407632 0.09361880756187185
+A 0.09361880756187185 0.09361880756187185 0.09361880756187185
+B 0.09361880756187185 0.09361880756187185 0.09361880756187185
+G 0.09361880756187185 0.12957574978407632 0.09361880756187185
+D 0.3304163279621552 0.3304163279621552 0.3304163279621552
+E 0.09361880756187185 0.12957574978407632 0.09361880756187185
 
---output_edges
-format:
-node1 node2 weight
-A B 0.5
-B C 0.6
 ...
 '''
 
@@ -60,7 +65,7 @@ def parse_arguments():
     @return arguments
     """
     parser = argparse.ArgumentParser(
-        description="Random Walk path reconstruction"
+        description="Random-walk-with-restart path reconstruction"
     )
     parser.add_argument("--edges_file", type=Path, required=True, help="Path to the edges file")
     parser.add_argument("--sources_file", type=Path, required=True, help="Path to the source node file")
@@ -153,16 +158,12 @@ def generate_output(G: nx.DiGraph, pr : dict, r_pr : dict, final_pr : dict, outp
         edge_flux[edge] = pr[edge[0]] * float(G[edge[0]][edge[1]]['weight']) / edge_sum[edge[0]]
 
     with output_file.open('w') as output_file_f:
-        output_file_f.write("Node1 Node2 Weight\n")
+        output_file_f.write("Node1 Node2 Weight Placeholder\n")
         for i in edge_flux:
-            output_file_f.write(f"{i[0]} {i[1]} {edge_flux[i]}\n")
-        output_file_f.write("///////END OF THE EDGES///////\n \n")
-        
-        output_file_f.write("///////START OF THE NODES///////\n")
-        output_file_f.write("node pr r_pr final_pr\n")
+            output_file_f.write(f"{i[0]} {i[1]} {edge_flux[i]} \n")
         for i in final_pr:
             output_file_f.write(f"{i} {pr[i]} {r_pr[i]} {final_pr[i]}\n")
-        
+
     print("Output file generated")
 
 # main algorithm
