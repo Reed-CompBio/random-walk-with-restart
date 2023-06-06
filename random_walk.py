@@ -1,63 +1,6 @@
 import networkx as nx
-
-"""
-Local neighborhood pathway reconstruction algorithm.
-The algorithm takes a network and a list of nodes as input.
-It outputs all edges in the network that have a node from the list as an endpoint.
-"""
-
 import argparse
 from pathlib import Path
-
-'''
---edges_file 
-format:
-Node1 Node2 Weight
-A B 0.5
-B C 0.6
-D E 0.7
-E A 0.8
-...
-
---sources_file 
-format:
-node prize
-A 1
-B 1
-C 1
-...
-
---targets_file (same format as sources_file) 
---damping_factor(default: 0.85) (optional)
---selection_function(default: min) (optional)
-
---output_file
-format:
-Node1 Node2 Weight Placeholder
-C D 0.09361880756187185 
-A D 0.09361880756187185 
-B D 0.09361880756187185 
-D E 0.11013877598738507 
-D F 0.11013877598738507 
-D G 0.11013877598738507 
-C 0.09361880756187185 0.09361880756187185 0.09361880756187185
-F 0.09361880756187185 0.12957574978407632 0.09361880756187185
-A 0.09361880756187185 0.09361880756187185 0.09361880756187185
-B 0.09361880756187185 0.09361880756187185 0.09361880756187185
-G 0.09361880756187185 0.12957574978407632 0.09361880756187185
-D 0.3304163279621552 0.3304163279621552 0.3304163279621552
-E 0.09361880756187185 0.12957574978407632 0.09361880756187185
-
-...
-'''
-
-'''
-Test:
-cd \random-walk-with-restart
-1. python random_walk.py --edges_file ./input/edges.txt --sources_file ./input/source_nodes.txt --targets_file ./input/target_nodes.txt --output_file ./output/output_file.txt
-2. python random_walk.py --edges_file ./input/edges.txt --sources_file ./input/source_nodes.txt --targets_file ./input/target_nodes.txt --damping_factor 0.7 --selection_function avg --output_file ./output/output_file.txt
-3. python random_walk.py --edges_file ./input/edges1.txt --sources_file ./input/source_nodes1.txt --targets_file ./input/target_nodes1.txt --output_file ./output/output_file1.txt
-'''
 
 def parse_arguments():
     """
@@ -67,10 +10,11 @@ def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Random-walk-with-restart path reconstruction"
     )
+    
+    # add arguments
     parser.add_argument("--edges_file", type=Path, required=True, help="Path to the edges file")
     parser.add_argument("--sources_file", type=Path, required=True, help="Path to the source node file")
     parser.add_argument("--targets_file", type=Path, required=True, help="Path to the target node file")
-    # parser.add_argument("--relevance_function(default: pagerank)", type=str, required= True, default='r' ,help="Select a relevance function to use (r for random walk/h for HotNet)")
     parser.add_argument("--damping_factor", type=float, required= False, default= 0.85, help="Select a damping factor between 0 and 1 for the random walk with restart (default: 0.85)")
     parser.add_argument("--selection_function", type=str, required= False, default= 'min', help="Select a function to use (min for minimum/sum for sum/avg for average/max for maximum)")
     parser.add_argument("--output_file", type=Path, required=True, help="Path to the output files")
@@ -119,7 +63,7 @@ def generate_nodes(nodes_file: Path) -> list:
     return nodes
 
 
-def generate_graph(nodes, edges) -> nx.DiGraph:
+def generate_graph(nodes : set, edges : list) -> nx.DiGraph:
     """
     This function is for generating the graph from the input files (edges/sources/targets)
     """
@@ -141,7 +85,7 @@ def generate_personalization_vector(nodes : list) -> dict:
 
 def generate_output(G: nx.DiGraph, pr : dict, r_pr : dict, final_pr : dict, output_file: Path) -> None:
     """
-    This function is for calculating the edge flux and writing it to the output file
+    This function is for calculating the edge flux and writing the results to the output file.
     """
     edge_sum = {}
     # Get out_edges for every node and get their sum (sum of neighbors of all nodes = O(2m), so the for loop takes O(m) time.)
@@ -169,7 +113,7 @@ def generate_output(G: nx.DiGraph, pr : dict, r_pr : dict, final_pr : dict, outp
 # main algorithm
 def random_walk(edges_file: Path, sources_file: Path, targets_file: Path, output_file: Path, damping_factor : float = 0.85 , selection_function : str = 'min'):
     """
-    This function is the main algorithm for random walk path reconstruction.
+    This function is the main algorithm for random-walk-with-restart path reconstruction.
     """
     if not edges_file.exists():
         raise OSError(f"Edges file {str(edges_file)} does not exist")
@@ -184,11 +128,13 @@ def random_walk(edges_file: Path, sources_file: Path, targets_file: Path, output
     # Create the parent directories for the output file if needed
     output_file.parent.mkdir(parents=True, exist_ok=True)
     
+    # check if the damping factor is between 0 and 1
     if damping_factor < 0 or damping_factor > 1:
         raise ValueError(f"Damping factor should be between 0 and 1")
     else:
         print(f"Damping factor is {damping_factor}")
     
+    # check if the selection function is either min, max, sum or avg
     if selection_function != 'min' and selection_function != 'sum' and selection_function != 'max' and selection_function != 'avg':
         raise ValueError(f"Selection function should be either min, max, sum or avg")
     else:
@@ -199,12 +145,15 @@ def random_walk(edges_file: Path, sources_file: Path, targets_file: Path, output
     source_node = generate_nodes(sources_file)
     pr = nx.pagerank(G, alpha=damping_factor, personalization=generate_personalization_vector(source_node))
     
+    # Create the reverse graph
     R = G.reverse()
     target_node = generate_nodes(targets_file)
+    # Running pagerank on the reverse graph with T as the personalization vector
     r_pr = nx.pagerank(R, alpha=damping_factor, personalization=generate_personalization_vector(target_node))
 
     final_pr = {}
     
+    # Combine the two pageranks with the selection function
     if selection_function == 'min':
         for i in pr:
             'Let user decide how to combine the two pageranks'
@@ -219,7 +168,7 @@ def random_walk(edges_file: Path, sources_file: Path, targets_file: Path, output
         for i in pr:
             final_pr[i] = max(pr[i], r_pr[i])
     
-    # Get the edge flux    
+    # Output the results
     generate_output(G, pr = pr, r_pr = r_pr, final_pr = final_pr, output_file = output_file)
     
 def main():
