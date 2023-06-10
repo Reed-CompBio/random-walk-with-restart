@@ -1,12 +1,17 @@
 <!-- Generate README to describe the RandomWalk Algorithm -->
 
 # Random Walk with Restart (RWwR) Algorithm
+
 This repository contains an implementation of the Random Walk with Restart (RWwR) algorithm in a 2D plane. The algorithm generates a random walk, considering the probability of each node being visited based on its importance in the graph. The RWwR algorithm incorporates a restart probability and a teleport probability, which affect the traversal behavior.
 
 ## Background
+
 The RWwR algorithm draws inspiration from the TieDIE algorithm developed by Evan O. Paull and others. The TieDIE algorithm aims to discover causal pathways that link genomic events to transcriptional states using a method called Tied Diffusion Through Interacting Events. You can find more information about the TieDIE algorithm in the research paper titled "Discovering causal pathways linking genomic events to transcriptional states using Tied Diffusion Through Interacting Events (TieDIE)" published in the Bioinformatics journal, Volume 29, Issue 21, November 2013.
 
 The RWwR algorithm modifies the TieDIE algorithm to generate random walks in a 2D plane while considering the importance of each node. The main idea for RWwR is to firstly run pagerank algorithm on the graph based on the given source set, edge weights, and node prizes. Then, the RWwR will perform a pagerank algorithm on the reversed graph starting from the target set. The RWwR algorithm will then combine the two pagerank results to generate a final result. With the calculation of the edge flux based on the final result for each node, we are able to identify the importance of each node and each edge in the graph.
+
+After gathering the information about the nodes and edges, users can choose their own ways of constructing the pathway whether based on the linking scores of nodes or edge fluxes of the edges. The default construct is adding nodes (edges).
+
 ## How to use
 
 ```
@@ -36,7 +41,9 @@ optional arguments:
 ```
 
 ## Example behavior
+
 edge file:
+
 ```
 Node1 Node2 Weight
 A D 1
@@ -48,6 +55,7 @@ D G 1
 ```
 
 source_nodes file:
+
 ```
 node prize
 A 1
@@ -56,6 +64,7 @@ C 1
 ```
 
 target_nodes file:
+
 ```
 node prize
 E 1
@@ -64,6 +73,7 @@ G 1
 ```
 
 output_file file:
+
 ```
 Node1 Node2 Weight Placeholder
 A D 0.12957574978407632 
@@ -82,4 +92,5 @@ C 0.12957574978407632 0.09361880756187185 0.09361880756187185
 ```
 
 ## References
+
 - Evan O. Paull and others, Discovering causal pathways linking genomic events to transcriptional states using Tied Diffusion Through Interacting Events (TieDIE), *Bioinformatics*, Volume 29, Issue 21, November 2013, Pages 2757–2764, [doi.org/10.1093/bioinformatics/btt471](https://academic.oup.com/bioinformatics/article/29/21/2757/195824)

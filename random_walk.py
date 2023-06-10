@@ -8,7 +8,7 @@ def parse_arguments():
     @return arguments
     """
     parser = argparse.ArgumentParser(
-        description="Random-walk-with-restart path reconstruction"
+        description="Random-walk-with-restart Path Reconstruction"
     )
     
     # add arguments
@@ -17,6 +17,7 @@ def parse_arguments():
     parser.add_argument("--targets_file", type=Path, required=True, help="Path to the target node file")
     parser.add_argument("--damping_factor", type=float, required= False, default= 0.85, help="Select a damping factor between 0 and 1 for the random walk with restart (default: 0.85)")
     parser.add_argument("--selection_function", type=str, required= False, default= 'min', help="Select a function to use (min for minimum/sum for sum/avg for average/max for maximum)")
+    parser.add_argument("--threshold", type=float, required= False, default= 0.0001, help="Select a threshold value between 0 and 1 for the construction reference (default: 0.0001)")
     parser.add_argument("--output_file", type=Path, required=True, help="Path to the output files")
 
     return parser.parse_args()
@@ -83,12 +84,39 @@ def generate_personalization_vector(nodes : list) -> dict:
     
     return personalization_vector
 
-def generate_output(G: nx.DiGraph, pr : dict, r_pr : dict, final_pr : dict, output_file: Path) -> None:
+
+def pathway_construction(G : nx.DiGraph, final_pr : dict, alpha : float, source_node : list, target_node : list):
+    """
+    Return a subnetwork of G where for each edge of it, both ends are in the subset of interest.
+    
+    """
+ 
+    linker_nodes = set()
+    filtered_nodes = set()
+    for key in final_pr:
+        if final_pr[key] > alpha:
+            print(f'Adding {key} (PR = {final_pr[key]}) to filtered nodes.')
+            linker_nodes.add(key)
+    
+    source_set = set([i[0] for i in source_node])
+    target_set = set([i[0] for i in target_node])
+    filtered_nodes = set(source_set).union(set(target_set)).union(set(linker_nodes))
+    print(f'Filtered nodes: {filtered_nodes}')
+ 
+    edgelist = set()
+ 
+    for u in G.edges().keys():
+        if u[0] in filtered_nodes and u[1] in filtered_nodes:
+            print(f'Adding edge {u}')
+            edgelist.add(u)
+
+    return edgelist
+
+def generate_output(G : nx.DiGraph, final_pr : dict, threshold : float, source_node : list, target_node : list, output_file : Path, pr : dict, r_pr : dict):
     """
     This function is for calculating the edge flux and writing the results to the output file.
     """
     edge_sum = {}
-    # Get out_edges for every node and get their sum (sum of neighbors of all nodes = O(2m), so the for loop takes O(m) time.)
     for node in G.nodes():
         temp = 0
         for i in G.out_edges(node):
@@ -98,20 +126,26 @@ def generate_output(G: nx.DiGraph, pr : dict, r_pr : dict, final_pr : dict, outp
     edge_flux = {}
     #calculate the edge flux
     for edge in G.edges():
-        # edge_sum[edge[0]] can never be 0 because we are only considering the nodes that have out_edges
         edge_flux[edge] = pr[edge[0]] * float(G[edge[0]][edge[1]]['weight']) / edge_sum[edge[0]]
 
+    sorted_edge_flux = sorted(edge_flux.items(), key=lambda x: x[1], reverse=True)
+    
+    sorted_final_pr = sorted(final_pr.items(), key=lambda x: x[1], reverse=True)
+    
+    edgelist = pathway_construction(G, final_pr, threshold, source_node, target_node)
     with output_file.open('w') as output_file_f:
-        output_file_f.write("Node1 Node2 Weight Placeholder\n")
-        for i in edge_flux:
-            output_file_f.write(f"{i[0]} {i[1]} {edge_flux[i]} \n")
-        for i in final_pr:
-            output_file_f.write(f"{i} {pr[i]} {r_pr[i]} {final_pr[i]}\n")
-
+        output_file_f.write("Node1\tNode2\tWeight\tPlaceholder\tType\n")
+        for i in sorted_edge_flux:
+            output_file_f.write(f"{i[0][0]}\t{i[0][1]}\t{i[1]}\t\t1\n")
+        for i in sorted_final_pr:
+            output_file_f.write(f"{i[0]}\t{pr[i[0]]}\t{r_pr[i[0]]}\t{i[1]}\t2\n")
+        for edge in edgelist:
+            output_file_f.write(f"{edge[0]}\t{edge[1]}\t{G[edge[0]][edge[1]]['weight']}\t\t3\n")
+        
     print("Output file generated")
 
 # main algorithm
-def random_walk(edges_file: Path, sources_file: Path, targets_file: Path, output_file: Path, damping_factor : float = 0.85 , selection_function : str = 'min'):
+def random_walk(edges_file: Path, sources_file: Path, targets_file: Path, output_file: Path, damping_factor : float = 0.85, selection_function : str = 'min', threshold : float = 0.0001):
     """
     This function is the main algorithm for random-walk-with-restart path reconstruction.
     """
@@ -139,9 +173,16 @@ def random_walk(edges_file: Path, sources_file: Path, targets_file: Path, output
         raise ValueError(f"Selection function should be either min, max, sum or avg")
     else:
         print(f"Selection function is {selection_function}")
-
+        
+    # check if the threshold is between 0 and 1
+    if threshold < 0 or threshold > 1:
+        raise ValueError(f"Threshold should be between 0 and 1")
+    else:
+        print(f"Threshold is {threshold}")
+    
     # Read the list of sources
-    G = generate_graph(generate_nodes_and_edges(edges_file)[0], generate_nodes_and_edges(edges_file)[1])
+    nodes, edges = generate_nodes_and_edges(edges_file)
+    G = generate_graph(nodes, edges)
     source_node = generate_nodes(sources_file)
     pr = nx.pagerank(G, alpha=damping_factor, personalization=generate_personalization_vector(source_node))
     
@@ -169,15 +210,20 @@ def random_walk(edges_file: Path, sources_file: Path, targets_file: Path, output
             final_pr[i] = max(pr[i], r_pr[i])
     
     # Output the results
-    generate_output(G, pr = pr, r_pr = r_pr, final_pr = final_pr, output_file = output_file)
+    generate_output(G, final_pr, threshold, source_node, target_node, output_file, pr, r_pr)
     
 def main():
     """
     Parse arguments and run pathway reconstruction
     """
     args = parse_arguments()
-    random_walk(args.edges_file, args.sources_file, args.targets_file,  args.output_file, args.damping_factor, args.selection_function)
+    random_walk(args.edges_file, args.sources_file, args.targets_file,args.output_file, args.damping_factor, args.selection_function, args.threshold)
 
 if __name__ == "__main__":
     main()
+    
+'''
+test:
+python random_walk.py --edges_file input/edges1.txt --sources_file input/source_nodes1.txt --targets_file input/target_nodes1.txt --damping_factor 0.85 --selection_function min --threshold 0.1 --output_file output/output1.txt
+'''
 
