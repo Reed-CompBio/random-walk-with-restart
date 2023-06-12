@@ -2,7 +2,7 @@ Node1 Node2 Weight
 A E 1
 B E 1
 B F 1
-G C 1
+C G 1
 D G 1
 E F 1
 E G 1
