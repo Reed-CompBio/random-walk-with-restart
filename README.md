@@ -31,14 +31,15 @@ options:
   --targets_file TARGETS_FILE
                         Path to the target node file
   --damping_factor DAMPING_FACTOR
-                        Select a damping factor between 0 and 1 for the random
-                        walk with restart (default: 0.85)
+                        Select a damping factor between 0 and 1 for the random walk with restart (default: 0.85)
   --selection_function SELECTION_FUNCTION
                         Select a function to use (min for minimum/sum for
                         sum/avg for average/max for maximum)
   --threshold THRESHOLD
                         Select a threshold value between 0 and 1 for the
-                        construction reference (default: 0.0001)
+                        construction reference (default: 0.001)
+  --single_source SINGLE_SOURCE
+                   Select True if you want to use a single source set (default: False)
   --output_file OUTPUT_FILE
                         Path to the output files
 ```

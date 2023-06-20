@@ -17,7 +17,8 @@ def parse_arguments():
     parser.add_argument("--targets_file", type=Path, required=True, help="Path to the target node file")
     parser.add_argument("--damping_factor", type=float, required= False, default= 0.85, help="Select a damping factor between 0 and 1 for the random walk with restart (default: 0.85)")
     parser.add_argument("--selection_function", type=str, required= False, default= 'min', help="Select a function to use (min for minimum/sum for sum/avg for average/max for maximum)")
-    parser.add_argument("--threshold", type=float, required= False, default= 0.0001, help="Select a threshold value between 0 and 1 for the construction reference (default: 0.0001)")
+    parser.add_argument("--threshold", type=float, required= False, default= 0.0001, help="Select a threshold value between 0 and 1 for the construction reference (default: 0.001)")
+    parser.add_argument("--single_source", type=bool, required = True, default= False, help="Select True if you want to use a single source node (default: False)")
     parser.add_argument("--output_file", type=Path, required=True, help="Path to the output files")
 
     return parser.parse_args()
@@ -95,7 +96,7 @@ def pathway_construction(G : nx.DiGraph, final_pr : dict, alpha : float, source_
     filtered_nodes = set()
     for key in final_pr:
         if final_pr[key] > alpha:
-            print(f'Adding {key} (PR = {final_pr[key]}) to filtered nodes.')
+            print(f'Adding {key} (Final PR = {final_pr[key]}) to filtered nodes.')
             linker_nodes.add(key)
     
     source_set = set([i[0] for i in source_node])
@@ -145,7 +146,7 @@ def generate_output(G : nx.DiGraph, final_pr : dict, threshold : float, source_n
     print("Output file generated")
 
 # main algorithm
-def random_walk(edges_file: Path, sources_file: Path, targets_file: Path, output_file: Path, damping_factor : float = 0.85, selection_function : str = 'min', threshold : float = 0.0001):
+def random_walk(edges_file: Path, sources_file: Path, targets_file: Path, output_file: Path, damping_factor : float = 0.85, selection_function : str = 'min', threshold : float = 0.001, single_source : bool = False):
     """
     This function is the main algorithm for random-walk-with-restart path reconstruction.
     """
@@ -194,21 +195,23 @@ def random_walk(edges_file: Path, sources_file: Path, targets_file: Path, output
 
     final_pr = {}
     
-    # Combine the two pageranks with the selection function
-    if selection_function == 'min':
-        for i in pr:
-            'Let user decide how to combine the two pageranks'
-            final_pr[i] = min(pr[i], r_pr[i])
-    elif selection_function == 'sum':
-        for i in pr:
-            final_pr[i] = pr[i] + r_pr[i]
-    elif selection_function == 'avg':
-        for i in pr:
-            final_pr[i] = (pr[i] + r_pr[i])/2
-    elif selection_function == 'max':
-        for i in pr:
-            final_pr[i] = max(pr[i], r_pr[i])
-    
+    if not single_source:
+        # Combine the two pageranks with the selection function
+        if selection_function == 'min':
+            for i in pr:
+                'Let user decide how to combine the two pageranks'
+                final_pr[i] = min(pr[i], r_pr[i])
+        elif selection_function == 'sum':
+            for i in pr:
+                final_pr[i] = pr[i] + r_pr[i]
+        elif selection_function == 'avg':
+            for i in pr:
+                final_pr[i] = (pr[i] + r_pr[i])/2
+        elif selection_function == 'max':
+            for i in pr:
+                final_pr[i] = max(pr[i], r_pr[i])
+    else:
+        final_pr = pr
     # Output the results
     generate_output(G, final_pr, threshold, source_node, target_node, output_file, pr, r_pr)
     
@@ -217,13 +220,13 @@ def main():
     Parse arguments and run pathway reconstruction
     """
     args = parse_arguments()
-    random_walk(args.edges_file, args.sources_file, args.targets_file,args.output_file, args.damping_factor, args.selection_function, args.threshold)
+    random_walk(args.edges_file, args.sources_file, args.targets_file,args.output_file, args.damping_factor, args.selection_function, args.threshold, args.single_source)
 
 if __name__ == "__main__":
     main()
     
 '''
 test:
-python random_walk.py --edges_file input/edges1.txt --sources_file input/source_nodes1.txt --targets_file input/target_nodes1.txt --damping_factor 0.85 --selection_function min --threshold 0.1 --output_file output/output1.txt
+python random_walk.py --edges_file input/edges1.txt --sources_file input/source_nodes1.txt --targets_file input/target_nodes1.txt --damping_factor 0.85 --selection_function min --threshold 0.1 --single_source False --output_file output/output1.txt
 '''
 
