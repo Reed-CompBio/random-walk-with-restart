@@ -1,12 +1,15 @@
 <!-- Generate README to describe the RandomWalk Algorithm -->
 
 # Random Walk with Restart (RWwR) Algorithm
+
 The algorithm generates a random walk, considering the probability of each node being visited based on its importance in the graph. The RWwR algorithm incorporates a restart probability and a teleport probability, which affect the traversal behavior. This algorithm will calculate the edge flux of each edge in the graph based on the results from RWwR algorithm as well to represent the importance of each edge in the graph.
 
 ## Background
+
 The RWwR algorithm draws inspiration from the TieDIE algorithm developed by Evan O. Paull and others. The TieDIE algorithm aims to discover causal pathways that link genomic events to transcriptional states using a method called Tied Diffusion Through Interacting Events. You can find more information about the TieDIE algorithm in the research paper titled "Discovering causal pathways linking genomic events to transcriptional states using Tied Diffusion Through Interacting Events (TieDIE)" published in the Bioinformatics journal, Volume 29, Issue 21, November 2013.
 
-The RWwR algorithm modifies the TieDIE algorithm to generate random walks in a 2D plane while considering the importance of each node. The main idea for RWwR is to firstly run pagerank algorithm on the graph based on the given source set, edge weights, and node prizes. Then, the RWwR will perform a pagerank algorithm on the reversed graph starting from the target set. The RWwR algorithm will then combine the two pagerank results to generate a final result. With the calculation of the edge flux based on the final result for each node, we are able to identify the importance of each node and each edge in the graph.
+The RWwR algorithm modifies the TieDIE algorithm to generate random walks in a graph/network while considering the importance of each node. The main idea for RWwR is to firstly run pagerank algorithm on the graph based on the given source set, edge weights, and node prizes. Then, the RWwR will perform a pagerank algorithm on the reversed graph starting from the target set. The RWwR algorithm will then combine the two pagerank results to generate a final result. With the calculation of the edge flux based on the final result for each node, we are able to identify the importance of each node and each edge in the graph. Moreover, the algorithm allows the user to define a threshold. It generates a pathway that includes nodes with visitation possibility exceeding the threshold and includes all edges connecting any two nodes from the extracted set of nodes.
+
 ## How to use
 
 ```
@@ -41,7 +44,9 @@ options:
 ```
 
 ## Example behavior
+
 edge file:
+
 ```
 Node1 Node2 Weight
 A D 1
@@ -53,6 +58,7 @@ D G 1
 ```
 
 source_nodes file:
+
 ```
 node prize
 A 1
@@ -61,6 +67,7 @@ C 1
 ```
 
 target_nodes file:
+
 ```
 node prize
 E 1
@@ -69,6 +76,7 @@ G 1
 ```
 
 output_file file:
+
 ```
 Node1	Node2	Weight	Placeholder	Type
 D	E	0.11013877598738507		1
@@ -93,4 +101,5 @@ A	D	1		3
 ```
 
 ## References
+
 - Evan O. Paull and others, Discovering causal pathways linking genomic events to transcriptional states using Tied Diffusion Through Interacting Events (TieDIE), *Bioinformatics*, Volume 29, Issue 21, November 2013, Pages 2757–2764, [doi.org/10.1093/bioinformatics/btt471](https://academic.oup.com/bioinformatics/article/29/21/2757/195824)
