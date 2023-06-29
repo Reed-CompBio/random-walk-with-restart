@@ -14,15 +14,16 @@ The RWwR algorithm modifies the TieDIE algorithm to generate random walks in a g
 
 ```
 $ python random_walk.py -h
-usage: random_walk.py [-h] --edges_file EDGES_FILE --sources_file SOURCES_FILE
-                      --targets_file TARGETS_FILE
+usage: random_walk.py [-h] --edges_file EDGES_FILE --sources_file
+                      SOURCES_FILE --targets_file TARGETS_FILE
                       [--damping_factor DAMPING_FACTOR]
                       [--selection_function SELECTION_FUNCTION]
-                      [--threshold THRESHOLD] --output_file OUTPUT_FILE
+                      [--threshold THRESHOLD] --output_file
+                      OUTPUT_FILE
 
 Random-walk-with-restart Path Reconstruction
 
-options:
+optional arguments:
   -h, --help            show this help message and exit
   --edges_file EDGES_FILE
                         Path to the edges file
@@ -33,13 +34,9 @@ options:
   --damping_factor DAMPING_FACTOR
                         Select a damping factor between 0 and 1 for the random walk with restart (default: 0.85)
   --selection_function SELECTION_FUNCTION
-                        Select a function to use (min for minimum/sum for
-                        sum/avg for average/max for maximum)
+                        Select a function to use (min for minimum/sum for sum/avg for average/max for maximum)
   --threshold THRESHOLD
-                        Select a threshold value between 0 and 1 for the
-                        construction reference (default: 0.001)
-  --single_source SINGLE_SOURCE
-                   Select True if you want to use a single source set (default: False)
+                        Select a threshold value between 0 and 1 for the construction reference (default: 0.001)
   --output_file OUTPUT_FILE
                         Path to the output files
 ```
