@@ -1,5 +1,5 @@
-node prize
-E 1
-F 1.2
-G 1.3
-H 0.9
+node	prize
+E	1
+F	1.2
+G	1.3
+H	0.9

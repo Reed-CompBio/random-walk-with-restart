@@ -72,10 +72,10 @@ def generate_nodes_and_edges(edges_file: Path, w: float) -> tuple:
             if i == 0:
                 continue
             line = line.strip()
-            endpoints = line.split(" ")
+            endpoints = line.split("\t")
             if len(endpoints) != 3:
                 raise ValueError(
-                    f"Edge {line} does not contain 2 nodes separated by ' ' and a weight"
+                    f"Edge {line} does not contain 2 nodes separated by a tab and a weight"
                 )
             nodes.add(endpoints[0])
             nodes.add(endpoints[1])
@@ -101,7 +101,7 @@ def generate_nodes(nodes_file: Path) -> list:
             if i == 0:
                 continue
             line = line.strip()
-            endpoints = line.split(" ")
+            endpoints = line.split("\t")
             if len(endpoints) != 2:
                 raise ValueError(f"Node {line} does not contain 1 node and a prize")
             # (node, prize)
