@@ -214,7 +214,7 @@ def generate_output(
             set_of_nodes.add(edge[0])
             set_of_nodes.add(edge[1])
             output_file_f.write(
-                f"{edge[0]}\t{edge[1]}\t{G[edge[0]][edge[1]]['weight']}\t\t3\n"
+                f"{edge[0]}\t{edge[1]}\tNan\tNan\tNan\t3\n"
             )
     print(f"The number of nodes in the original network is {len(G.nodes())}")
     print(f"The number of edges in the original network is {len(G.edges())}")
