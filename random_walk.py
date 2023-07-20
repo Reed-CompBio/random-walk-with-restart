@@ -20,7 +20,14 @@ def parse_arguments():
         "--sources_file", type=Path, required=True, help="Path to the source node file"
     )
     parser.add_argument(
-        "--targets_file", type=Path, required=True, help="Path to the target node file"
+        "--single_source",
+        type=str,
+        required=True,
+        default="1",
+        help="1 for single-sourced RWR and 0 for source-target RWR (default: 1)",
+    )
+    parser.add_argument(
+        "--targets_file", type=Path, required=False, help="Path to the target node file"
     )
     parser.add_argument(
         "--damping_factor",
@@ -155,7 +162,7 @@ def pathway_construction(
         if u[0] in filtered_nodes and u[1] in filtered_nodes:
             edgelist.add(u)
 
-    return edgelist
+    return edgelist, filtered_nodes
 
 
 def generate_output(
@@ -163,14 +170,17 @@ def generate_output(
     final_pr: dict,
     threshold: float,
     source_node: list,
-    target_node: list,
     output_file: Path,
     pr: dict,
-    r_pr: dict,
+    target_node: list = [],
+    r_pr: dict = None,
 ):
     """
     This function is for calculating the edge flux and writing the results to the output file.
     """
+    
+    edgelist, nodelist = pathway_construction(G, final_pr, threshold, source_node, target_node)
+    
     edge_sum = {}
     for node in G.nodes():
         temp = 0
@@ -182,21 +192,24 @@ def generate_output(
     # calculate the edge flux
     for edge in G.edges():
         edge_flux[edge] = (
-            pr[edge[0]] * float(G[edge[0]][edge[1]]["weight"]) / edge_sum[edge[0]]
+            [pr[edge[0]] * float(G[edge[0]][edge[1]]["weight"]) / edge_sum[edge[0]], str(edge in edgelist)]
         )
 
     sorted_edge_flux = sorted(edge_flux.items(), key=lambda x: x[1], reverse=True)
-
+    
     sorted_final_pr = sorted(final_pr.items(), key=lambda x: x[1], reverse=True)
 
     set_of_nodes = set()
-    edgelist = pathway_construction(G, final_pr, threshold, source_node, target_node)
+
     with output_file.open("w") as output_file_f:
-        output_file_f.write("Node1\tNode2\tWeight\tPlaceholder\tType\n")
+        output_file_f.write("Node1\tNode2\tEdge Flux\tWeight\tInNetwork\tType\n")
         for i in sorted_edge_flux:
-            output_file_f.write(f"{i[0][0]}\t{i[0][1]}\t{i[1]}\t\t1\n")
+            output_file_f.write(f"{i[0][0]}\t{i[0][1]}\t{i[1][0]}\t{G[i[0][0]][i[0][1]]['weight']}\t{i[1][1]}\t1\n")
         for i in sorted_final_pr:
-            output_file_f.write(f"{i[0]}\t{pr[i[0]]}\t{r_pr[i[0]]}\t{i[1]}\t2\n")
+            if r_pr is not None:
+                output_file_f.write(f"{i[0]}\t{pr[i[0]]}\t{r_pr[i[0]]}\t{i[1]}\t{str(i[0] in nodelist)}\t2\n")
+            else:
+                output_file_f.write(f"{i[0]}\t{pr[i[0]]}\tNan\t{i[1]}\t{str(i[0] in nodelist)}\t2\n")
         for edge in edgelist:
             set_of_nodes.add(edge[0])
             set_of_nodes.add(edge[1])
@@ -216,6 +229,7 @@ def random_walk(
     sources_file: Path,
     targets_file: Path,
     output_file: Path,
+    single_source: str = "1",
     damping_factor: float = 0.85,
     w: float = 0.00,
     selection_function: str = "min",
@@ -228,14 +242,27 @@ def random_walk(
         raise OSError(f"Edges file {str(edges_file)} does not exist")
     if not sources_file.exists():
         raise OSError(f"Sources file {str(sources_file)} does not exist")
-    if not targets_file.exists():
+
+    if single_source != "1" and single_source != "0":
+        raise ValueError(f"Single source should be either 1 or 0")
+
+    if single_source == "0" and not targets_file.exists():
         raise OSError(f"Targets file {str(targets_file)} does not exist")
+    elif single_source == "1" and targets_file:
+        print(f"Targets file {str(targets_file)} will be ignored")
 
     if output_file.exists():
         print(f"Output files {str(output_file)} (nodes) will be overwritten")
 
     # Create the parent directories for the output file if needed
     output_file.parent.mkdir(parents=True, exist_ok=True)
+
+    if single_source == "1":
+        print(
+            "Single source mode (The targets file and the selection function will be ignored)"
+        )
+    else:
+        print("Source-Target mode")
 
     # check if the damping factor is between 0 and 1
     if damping_factor < 0 or damping_factor > 1:
@@ -275,36 +302,46 @@ def random_walk(
         personalization=generate_personalization_vector(source_node),
     )
 
-    # Create the reverse graph
-    R = G.reverse()
-    target_node = generate_nodes(targets_file)
-    # Running pagerank on the reverse graph with T as the personalization vector
-    r_pr = nx.pagerank(
-        R,
-        alpha=damping_factor,
-        personalization=generate_personalization_vector(target_node),
-    )
+    target_node = []
+    r_pr = {}
+
+    if single_source == "0":
+        # Create the reverse graph
+        R = G.reverse()
+        target_node = generate_nodes(targets_file)
+        # Running pagerank on the reverse graph with T as the personalization vector
+        r_pr = nx.pagerank(
+            R,
+            alpha=damping_factor,
+            personalization=generate_personalization_vector(target_node),
+        )
 
     final_pr = {}
 
-    # Combine the two pageranks with the selection function
-    if selection_function == "min":
-        for i in pr:
-            final_pr[i] = min(pr[i], r_pr[i])
-    elif selection_function == "sum":
-        for i in pr:
-            final_pr[i] = pr[i] + r_pr[i]
-    elif selection_function == "avg":
-        for i in pr:
-            final_pr[i] = (pr[i] + r_pr[i]) / 2
-    elif selection_function == "max":
-        for i in pr:
-            final_pr[i] = max(pr[i], r_pr[i])
+    if single_source == "0":
+        # Combine the two pageranks with the selection function
+        if selection_function == "min":
+            for i in pr:
+                final_pr[i] = min(pr[i], r_pr[i])
+        elif selection_function == "sum":
+            for i in pr:
+                final_pr[i] = pr[i] + r_pr[i]
+        elif selection_function == "avg":
+            for i in pr:
+                final_pr[i] = (pr[i] + r_pr[i]) / 2
+        elif selection_function == "max":
+            for i in pr:
+                final_pr[i] = max(pr[i], r_pr[i])
+    else:
+        final_pr = pr
 
-    # Output the results
-    generate_output(
-        G, final_pr, threshold, source_node, target_node, output_file, pr, r_pr
-    )
+    if single_source == "0":
+        # Output the results
+        generate_output(
+            G, final_pr, threshold, source_node, output_file, pr, target_node, r_pr
+        )
+    else:
+        generate_output(G, final_pr, threshold, source_node, output_file, pr)
 
 
 def main():
@@ -317,6 +354,7 @@ def main():
         args.sources_file,
         args.targets_file,
         args.output_file,
+        args.single_source,
         args.damping_factor,
         args.w,
         args.selection_function,
@@ -329,5 +367,6 @@ if __name__ == "__main__":
 
 """
 test:
-python random_walk.py --edges_file input/edges1.txt --sources_file input/source_nodes1.txt --targets_file input/target_nodes1.txt --damping_factor 0.85 --selection_function min --w 0.4 --threshold 0.01 --output_file output/output1.txt
+python random_walk.py --edges_file input/edges1.txt --sources_file input/source_nodes1.txt --single_source 0 --targets_file input/target_nodes1.txt --damping_factor 0.85 --selection_function min --w 0.000 --threshold 0.01 --output_file output/output1.txt
+python random_walk.py --edges_file input/edges1.txt --sources_file input/source_nodes1.txt --single_source 1 --damping_factor 0.85 --selection_function min --w 0.000 --threshold 0.01 --output_file output/output1.txt
 """
