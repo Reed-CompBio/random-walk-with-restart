@@ -9,7 +9,7 @@ def parse_arguments():
     @return arguments
     """
     parser = argparse.ArgumentParser(
-        description="Random-walk-with-restart Path Reconstruction"
+        description="Random-Walk-with-Restart Path Reconstruction"
     )
 
     # add arguments
@@ -22,7 +22,7 @@ def parse_arguments():
     parser.add_argument(
         "--single_source",
         type=str,
-        required=True,
+        required=False,
         default="1",
         help="1 for single-sourced RWR and 0 for source-target RWR (default: 1)",
     )
@@ -44,8 +44,8 @@ def parse_arguments():
         "--w",
         type=float,
         required=False,
-        default=0.000,
-        help="Select a lower bound between 0 and 1 for the edge confidence (default: 0.000)",
+        default=0.01,
+        help="Select a lower bound between 0 and 1 for the edge weight (default: 0.01)",
     )
     parser.add_argument(
         "--threshold",
@@ -108,7 +108,7 @@ def generate_nodes(nodes_file: Path, node_type: str) -> list:
             endpoints = line.split("\t")
             if len(endpoints) != 3:
                 raise ValueError(f"Node {line} does not contain 1 node, a prize and a type")
-            
+
             if endpoints[2] != node_type:
                 continue
             nodes.append((endpoints[0], endpoints[1]))
@@ -172,14 +172,14 @@ def generate_output(
     output_file: Path,
     pr: dict,
     target_node: list = [],
-    r_pr: dict = None,
+    r_pr: dict = {},
 ):
     """
     This function is for calculating the edge flux and writing the results to the output file.
     """
-    
+
     edgelist, nodelist = pathway_construction(G, final_pr, threshold, source_node, target_node)
-    
+
     edge_sum = {}
     for node in G.nodes():
         temp = 0
@@ -195,7 +195,7 @@ def generate_output(
         )
 
     sorted_edge_flux = sorted(edge_flux.items(), key=lambda x: x[1], reverse=True)
-    
+
     sorted_final_pr = sorted(final_pr.items(), key=lambda x: x[1], reverse=True)
 
     set_of_nodes = set()
@@ -205,7 +205,7 @@ def generate_output(
         for i in sorted_edge_flux:
             output_file_f.write(f"{i[0][0]}\t{i[0][1]}\t{i[1][0]}\t{G[i[0][0]][i[0][1]]['weight']}\t{i[1][1]}\t1\n")
         for i in sorted_final_pr:
-            if r_pr is not None:
+            if r_pr != {}:
                 output_file_f.write(f"{i[0]}\t{pr[i[0]]}\t{r_pr[i[0]]}\t{i[1]}\t{str(i[0] in nodelist)}\t2\n")
             else:
                 output_file_f.write(f"{i[0]}\t{pr[i[0]]}\tNan\t{i[1]}\t{str(i[0] in nodelist)}\t2\n")
@@ -227,11 +227,11 @@ def random_walk(
     edges_file: Path,
     prizes_file: Path,
     output_file: Path,
-    single_source: str = "1",
-    damping_factor: float = 0.85,
-    w: float = 0.00,
-    selection_function: str = "min",
-    threshold: float = 0.001,
+    single_source: str,
+    damping_factor: float,
+    w: float,
+    selection_function: str,
+    threshold: float,
 ):
     """
     This function is the main algorithm for random-walk-with-restart path reconstruction.
@@ -277,7 +277,7 @@ def random_walk(
     if w < 0 or w > 1:
         raise ValueError(f"Weight should be between 0 and 1")
     else:
-        print(f"Lower bound for edge confidence is {w}")
+        print(f"Lower bound for edge weight is {w}")
 
     # check if the threshold is between 0 and 1
     if threshold < 0 or threshold > 1:

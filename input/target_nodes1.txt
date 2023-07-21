@@ -1,5 +1,0 @@
-node	prize
-I	1
-K	1
-L	1
-M	1

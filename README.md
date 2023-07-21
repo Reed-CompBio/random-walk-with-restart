@@ -14,59 +14,36 @@ The RWR algorithm modifies the TieDIE algorithm to generate random walks in a gr
 
 ```
 $ python random_walk.py -h
-usage: random_walk.py [-h] --edges_file
-                      EDGES_FILE --sources_file
-                      SOURCES_FILE
-                      --single_source
-                      SINGLE_SOURCE
-                      [--targets_file TARGETS_FILE]
+usage: random_walk.py [-h] --edges_file EDGES_FILE --prizes_file PRIZES_FILE
+                      [--single_source SINGLE_SOURCE]
                       [--damping_factor DAMPING_FACTOR]
-                      [--selection_function SELECTION_FUNCTION]
-                      [--w W]
-                      [--threshold THRESHOLD]
-                      --output_file OUTPUT_FILE
+                      [--selection_function SELECTION_FUNCTION] [--w W]
+                      [--threshold THRESHOLD] --output_file OUTPUT_FILE
 
-Random-walk-with-restart Path Reconstruction
+Random-Walk-with-Restart Path Reconstruction
 
 optional arguments:
-  -h, --help            show this help message
-                        and exit
+  -h, --help            show this help message and exit
   --edges_file EDGES_FILE
                         Path to the edges file
-  --sources_file SOURCES_FILE
-                        Path to the source node
-                        file
+  --prizes_file PRIZES_FILE
+                        Path to the prizes file
   --single_source SINGLE_SOURCE
-                        1 for single-sourced
-                        RWR and 0 for source-
-                        target RWR (default: 1)
-  --targets_file TARGETS_FILE
-                        Path to the target node
-                        file
+                        1 for single-sourced RWR and 0 for source-target RWR
+                        (default: 1)
   --damping_factor DAMPING_FACTOR
-                        Select a damping factor
-                        between 0 and 1 for the
-                        random walk with
-                        restart (default: 0.85)
+                        Select a damping factor between 0 and 1 for the
+                        random walk with restart (default: 0.85)
   --selection_function SELECTION_FUNCTION
-                        Select a function to
-                        use (min for
-                        minimum/sum for sum/avg
-                        for average/max for
-                        maximum)
-  --w W                 Select a lower bound
-                        between 0 and 1 for the
-                        edge confidence
-                        (default: 0.000)
+                        Select a function to use (min for minimum/sum for
+                        sum/avg for average/max for maximum)
+  --w W                 Select a lower bound between 0 and 1 for the edge
+                        weight (default: 0.01)
   --threshold THRESHOLD
-                        Select a threshold
-                        value between 0 and 1
-                        for the construction
-                        reference (default:
-                        0.001)
+                        Select a threshold value between 0 and 1 for the
+                        construction reference (default: 0.001)
   --output_file OUTPUT_FILE
-                        Path to the output
-                        files
+                        Path to the output files
 ```
 
 ## Example behavior
@@ -74,38 +51,46 @@ optional arguments:
 Command Line:
 
 ```
-
 $ python random_walk.py --edges_file input/edges1.txt --sources_file input/source_nodes1.txt --single_source 0 --targets_file input/target_nodes1.txt --damping_factor 0.85 --selection_function min --w 0.4 --threshold 0.05 --output_file output/output1.txt
 ```
 
-edge file:
+edge_file:
 
 ```
-Node1 Node2 Weight
-A D 1
-B D 1
-C D 1
-D E 1
-D F 1
-D G 1
+Node1	Node2	Weight
+A	E	1
+B	E	1
+B	F	1
+C	G	1
+D	G	1
+E	F	1
+E	G	1
+E	I	1
+E	H	1
+F	G	1
+G	I	1
+G	L	1
+G	M	1
+G	N	1
+H	I	1
+H	J	1
+I	K	1
+K	G	1
+
 ```
 
-source_nodes file:
+prizes_file:
 
 ```
-node prize
-A 1
-B 1
-C 1
-```
-
-target_nodes file:
-
-```
-node prize
-E 1
-F 1
-G 1
+NODEID	prizes	Node type
+A	1	source
+B	1	source
+C	1	source
+D	1	source
+I	1	target
+K	1	target
+L	1	target
+M	1	target
 ```
 
 output_file file:
