@@ -1,0 +1,9 @@
+NODEID	prizes	Node type
+A	1	source
+B	1	source
+C	1	source
+D	1	source
+I	1	target
+K	1	target
+L	1	target
+M	1	target

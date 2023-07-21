@@ -17,7 +17,7 @@ def parse_arguments():
         "--edges_file", type=Path, required=True, help="Path to the edges file"
     )
     parser.add_argument(
-        "--sources_file", type=Path, required=True, help="Path to the source node file"
+        "--prizes_file", type=Path, required=True, help="Path to the prizes file"
     )
     parser.add_argument(
         "--single_source",
@@ -25,9 +25,6 @@ def parse_arguments():
         required=True,
         default="1",
         help="1 for single-sourced RWR and 0 for source-target RWR (default: 1)",
-    )
-    parser.add_argument(
-        "--targets_file", type=Path, required=False, help="Path to the target node file"
     )
     parser.add_argument(
         "--damping_factor",
@@ -97,7 +94,7 @@ def generate_nodes_and_edges(edges_file: Path, w: float) -> tuple:
     return nodes, edges
 
 
-def generate_nodes(nodes_file: Path) -> list:
+def generate_nodes(nodes_file: Path, node_type: str) -> list:
     """
     This function is for generating the nodes from the path to the source/target file
     """
@@ -109,9 +106,11 @@ def generate_nodes(nodes_file: Path) -> list:
                 continue
             line = line.strip()
             endpoints = line.split("\t")
-            if len(endpoints) != 2:
-                raise ValueError(f"Node {line} does not contain 1 node and a prize")
-            # (node, prize)
+            if len(endpoints) != 3:
+                raise ValueError(f"Node {line} does not contain 1 node, a prize and a type")
+            
+            if endpoints[2] != node_type:
+                continue
             nodes.append((endpoints[0], endpoints[1]))
     return nodes
 
@@ -226,8 +225,7 @@ def generate_output(
 # main algorithm
 def random_walk(
     edges_file: Path,
-    sources_file: Path,
-    targets_file: Path,
+    prizes_file: Path,
     output_file: Path,
     single_source: str = "1",
     damping_factor: float = 0.85,
@@ -240,16 +238,11 @@ def random_walk(
     """
     if not edges_file.exists():
         raise OSError(f"Edges file {str(edges_file)} does not exist")
-    if not sources_file.exists():
-        raise OSError(f"Sources file {str(sources_file)} does not exist")
+    if not prizes_file.exists():
+        raise OSError(f"Sources file {str(prizes_file)} does not exist")
 
     if single_source != "1" and single_source != "0":
         raise ValueError(f"Single source should be either 1 or 0")
-
-    if single_source == "0" and not targets_file.exists():
-        raise OSError(f"Targets file {str(targets_file)} does not exist")
-    elif single_source == "1" and targets_file:
-        print(f"Targets file {str(targets_file)} will be ignored")
 
     if output_file.exists():
         print(f"Output files {str(output_file)} (nodes) will be overwritten")
@@ -295,7 +288,7 @@ def random_walk(
     # Read the list of sources
     nodes, edges = generate_nodes_and_edges(edges_file, w)
     G = generate_graph(nodes, edges)
-    source_node = generate_nodes(sources_file)
+    source_node = generate_nodes(prizes_file, 'source')
     pr = nx.pagerank(
         G,
         alpha=damping_factor,
@@ -308,7 +301,7 @@ def random_walk(
     if single_source == "0":
         # Create the reverse graph
         R = G.reverse()
-        target_node = generate_nodes(targets_file)
+        target_node = generate_nodes(prizes_file, 'target')
         # Running pagerank on the reverse graph with T as the personalization vector
         r_pr = nx.pagerank(
             R,
@@ -351,8 +344,7 @@ def main():
     args = parse_arguments()
     random_walk(
         args.edges_file,
-        args.sources_file,
-        args.targets_file,
+        args.prizes_file,
         args.output_file,
         args.single_source,
         args.damping_factor,
@@ -367,6 +359,6 @@ if __name__ == "__main__":
 
 """
 test:
-python random_walk.py --edges_file input/edges1.txt --sources_file input/source_nodes1.txt --single_source 0 --targets_file input/target_nodes1.txt --damping_factor 0.85 --selection_function min --w 0.000 --threshold 0.01 --output_file output/output1.txt
-python random_walk.py --edges_file input/edges1.txt --sources_file input/source_nodes1.txt --single_source 1 --damping_factor 0.85 --selection_function min --w 0.000 --threshold 0.01 --output_file output/output1.txt
+python random_walk.py --edges_file input/edges1.txt --prizes_file input/prizes1.txt --single_source 0 --damping_factor 0.85 --selection_function min --w 0.000 --threshold 0.01 --output_file output/output1.txt
+python random_walk.py --edges_file input/edges1.txt --prizes_file input/prizes1.txt --single_source 1 --damping_factor 0.85 --selection_function min --w 0.000 --threshold 0.01 --output_file output/output1.txt
 """
