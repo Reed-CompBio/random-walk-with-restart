@@ -1,9 +1,9 @@
 NODEID	prizes	Node type
-A	1	source
-B	1	source
-C	1	source
-D	1	source
-I	1	target
-K	1	target
-L	1	target
-M	1	target
+S1	1	source
+S2	1	source
+S3	1	source
+S4	1	source
+T1	1	target
+T2	1	target
+T3	1	target
+T4	1	target

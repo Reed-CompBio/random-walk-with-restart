@@ -251,6 +251,7 @@ def random_walk(
     output_file.parent.mkdir(parents=True, exist_ok=True)
 
     if single_source == "1":
+        # print a warning here.
         print(
             "Single source mode (The targets file and the selection function will be ignored)"
         )
@@ -359,6 +360,7 @@ if __name__ == "__main__":
 
 """
 test:
+python random_walk.py --edges_file input/edges1.txt --prizes_file input/prizes1.txt --output_file output/output1.txt
 python random_walk.py --edges_file input/edges1.txt --prizes_file input/prizes1.txt --single_source 0 --damping_factor 0.85 --selection_function min --w 0.000 --threshold 0.01 --output_file output/output1.txt
 python random_walk.py --edges_file input/edges1.txt --prizes_file input/prizes1.txt --single_source 1 --damping_factor 0.85 --selection_function min --w 0.000 --threshold 0.01 --output_file output/output1.txt
 """
